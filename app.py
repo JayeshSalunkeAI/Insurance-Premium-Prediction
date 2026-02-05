@@ -163,7 +163,7 @@ col1, col2, col3 = st.sidebar.columns(3)
 with col1:
     home_btn = st.button("🏠 Home", use_container_width=True)
 with col2:
-    eda_btn = st.button("📊 EDA", use_container_width=True)
+    eda_btn = st.button("📊 E.D.A", use_container_width=True)
 with col3:
     pred_btn = st.button("🔮 Predict", use_container_width=True)
 
@@ -712,307 +712,193 @@ elif st.session_state.page == 'prediction':
         )
         
         # BMI Section
-        st.markdown("### 📏 BMI Calculator")
+        # BMI Section (allow direct BMI input or calculate from height & weight)
+        st.markdown("### 📏 BMI")
         st.markdown("""
         <div class='info-box'>
         <p><strong>BMI (Body Mass Index)</strong> = Weight (kg) ÷ Height² (m²)</p>
         </div>
         """, unsafe_allow_html=True)
-        
-        bmi_col1, bmi_col2 = st.columns(2)
-        
-        with bmi_col1:
-            height_feet = st.number_input(
-                "Height (feet)",
-                min_value=3.0,
-                max_value=9.0,
-                value=5.5,
+
+        bmi_input_method = st.radio("BMI Input Method", ["Calculate from height & weight", "Enter BMI directly"])
+
+        if bmi_input_method == "Calculate from height & weight":
+            bmi_col1, bmi_col2 = st.columns(2)
+            with bmi_col1:
+                height_feet = st.number_input(
+                    "Height (feet)",
+                    min_value=3.0,
+                    max_value=9.0,
+                    value=5.5,
+                    step=0.1,
+                    help="Your height in feet (e.g., 5.5 for 5'6\")"
+                )
+            with bmi_col2:
+                weight_kg = st.number_input(
+                    "Weight (kg)",
+                    min_value=30.0,
+                    max_value=250.0,
+                    value=70.0,
+                    step=0.5,
+                    help="Your weight in kilograms"
+                )
+            height_meters = height_feet * 0.3048
+            bmi = weight_kg / (height_meters ** 2) if height_meters > 0 else 0.0
+        else:
+            bmi = st.number_input(
+                "BMI",
+                min_value=10.0,
+                max_value=80.0,
+                value=24.0,
                 step=0.1,
-                help="Your height in feet (e.g., 5.5 for 5'6\")"
+                help="Enter your BMI directly if you already know it"
             )
-        
-        with bmi_col2:
-            weight_kg = st.number_input(
-                "Weight (kg)",
-                min_value=30.0,
-                max_value=250.0,
-                value=70.0,
-                step=0.5,
-                help="Your weight in kilograms"
-            )
-        
-        # Calculate BMI
-        height_meters = height_feet * 0.3048
-        bmi = weight_kg / (height_meters ** 2)
-        
-        # BMI Category
+
+        # BMI Category display
         if bmi < 18.5:
-            bmi_category = "Underweight"
+            bmi_category_label = "Underweight"
             bmi_color = "#2196F3"
         elif bmi < 25:
-            bmi_category = "Normal Weight"
+            bmi_category_label = "Normal Weight"
             bmi_color = "#4caf50"
         elif bmi < 30:
-            bmi_category = "Overweight"
+            bmi_category_label = "Overweight"
             bmi_color = "#ff9800"
         else:
-            bmi_category = "Obese"
+            bmi_category_label = "Obese"
             bmi_color = "#f44336"
-        
+
         st.markdown(f"""
         <div style='background-color: #0f3460; border: 2px solid {bmi_color}; 
                     padding: 20px; border-radius: 10px; text-align: center;'>
         <p style='margin: 0; color: #cccccc;'><strong>Your BMI:</strong></p>
         <p style='font-size: 2.5em; color: {bmi_color}; margin: 10px 0; font-weight: bold;'>{bmi:.2f}</p>
-        <p style='margin: 0; color: {bmi_color}; font-weight: bold;'>{bmi_category}</p>
+        <p style='margin: 0; color: {bmi_color}; font-weight: bold;'>{bmi_category_label}</p>
         </div>
         """, unsafe_allow_html=True)
-    
-    with col2:
-        st.markdown("### 📊 Prediction Results")
-        
-        # Predict button
-        if st.button("🔮 Calculate Insurance Cost", type="primary", use_container_width=True,
-                     key="predict_button"):
-            
-            # Prepare input data
-            input_data = pd.DataFrame({
-                'age': [age],
-                'sex': [sex],
-                'bmi': [bmi],
-                'children': [children],
-                'smoker': [smoker],
-                'region': [region]
-            })
-            
-            # Encode categorical variables
-            input_data['sex_encoded'] = le_sex.transform(input_data['sex'])
-            input_data['smoker_encoded'] = le_smoker.transform(input_data['smoker'])
-            input_data['region_encoded'] = le_region.transform(input_data['region'])
-            
-            # Select features for prediction
-            X_input = input_data[['age', 'sex_encoded', 'bmi', 'children', 
-                                 'smoker_encoded', 'region_encoded']]
-            
-            # Scale if needed
-            if use_scaling:
-                X_input = scaler.transform(X_input)
-            
-            # Make prediction
-            prediction = model.predict(X_input)[0]
-            
-            # Display prediction
-            st.markdown(f"""
-            <div style='background: linear-gradient(135deg, #0f3460 0%, #16213e 100%); 
-                        border: 3px solid #16c784; padding: 30px; border-radius: 15px; 
-                        text-align: center; margin-top: 20px;'>
-            <p style='color: #cccccc; font-size: 1.1em; margin: 0;'><strong>Estimated Annual Insurance Cost</strong></p>
-            <p style='font-size: 3em; color: #16c784; margin: 15px 0; font-weight: bold;'>${prediction:,.2f}</p>
-            <p style='color: #ffb700; margin: 0;'>Based on your personal information</p>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Detailed breakdown
-            st.markdown("#### 📈 Your Profile Summary")
-            
-            summary_col1, summary_col2 = st.columns(2)
-            
-            with summary_col1:
+
+        # Prediction column (unchanged visual layout)
+        with col2:
+            st.markdown("### 📊 Prediction Results")
+
+            if st.button("🔮 Calculate Insurance Cost", type="primary", use_container_width=True, key="predict_button"):
+                # Build input_data and engineered features exactly as model expects
+                input_data = pd.DataFrame({
+                    'age': [age],
+                    'sex': [sex],
+                    'bmi': [bmi],
+                    'children': [children],
+                    'smoker': [smoker],
+                    'region': [region]
+                })
+
+                # Choose label encoders from model package if provided, else fall back to local ones
+                label_encs = model_package.get('label_encoders', {}) if isinstance(model_package, dict) else {}
+                sex_enc = label_encs.get('sex', le_sex)
+                smoker_enc = label_encs.get('smoker', le_smoker)
+                region_enc = label_encs.get('region', le_region)
+
+                input_data['sex_encoded'] = sex_enc.transform(input_data['sex'])
+                input_data['smoker_encoded'] = smoker_enc.transform(input_data['smoker'])
+                input_data['region_encoded'] = region_enc.transform(input_data['region'])
+                input_data['smoker_binary'] = (input_data['smoker'] == 'yes').astype(int)
+
+                # Numeric BMI category used by the model (0=Underweight,1=Normal,2=Overweight,3=Obese)
+                def categorize_bmi_num(b):
+                    if b < 18.5:
+                        return 0
+                    elif b < 25:
+                        return 1
+                    elif b < 30:
+                        return 2
+                    else:
+                        return 3
+
+                input_data['bmi_category'] = input_data['bmi'].apply(categorize_bmi_num)
+
+                # Age groups consistent with training
+                if input_data.loc[0, 'age'] <= 30:
+                    input_data['age_group'] = 0
+                elif input_data.loc[0, 'age'] <= 50:
+                    input_data['age_group'] = 1
+                else:
+                    input_data['age_group'] = 2
+
+                input_data['smoker_bmi'] = input_data['smoker_binary'] * input_data['bmi']
+                input_data['age_bmi'] = input_data['age'] * input_data['bmi']
+                input_data['is_obese_smoker'] = int((input_data.loc[0, 'bmi'] > 30) and (input_data.loc[0, 'smoker'] == 'yes'))
+                # Risk score calculation (same formula used elsewhere)
+                smoker_bin = int(input_data.loc[0, 'smoker_binary'])
+                input_data['risk_score'] = input_data.loc[0, 'age'] / 64 * 0.3 + input_data.loc[0, 'bmi'] / 54 * 0.3 + smoker_bin * 0.4
+
+                # Ensure the input columns are in the same order/names as model expects
+                X_input = input_data[feature_names]
+
+                # Scale using the saved scaler -- pass a DataFrame with matching column names
+                if use_scaling:
+                    X_input = scaler.transform(X_input)
+
+                # Predict
+                prediction = model.predict(X_input)[0]
+
+                # Display prediction and profile summary (same UI as before)
                 st.markdown(f"""
-                <div class='info-box'>
-                <p><strong>Age:</strong> {age} years</p>
-                <p><strong>Sex:</strong> {sex.capitalize()}</p>
-                <p><strong>BMI:</strong> {bmi:.2f} ({bmi_category})</p>
-                <p><strong>Children:</strong> {children}</p>
+                <div style='background: linear-gradient(135deg, #0f3460 0%, #16213e 100%); 
+                            border: 3px solid #16c784; padding: 30px; border-radius: 15px; 
+                            text-align: center; margin-top: 20px;'>
+                <p style='color: #cccccc; font-size: 1.1em; margin: 0;'><strong>Estimated Annual Insurance Cost</strong></p>
+                <p style='font-size: 3em; color: #16c784; margin: 15px 0; font-weight: bold;'>${prediction:,.2f}</p>
+                <p style='color: #ffb700; margin: 0;'>Based on your personal information</p>
                 </div>
                 """, unsafe_allow_html=True)
-            
-            with summary_col2:
-                st.markdown(f"""
-                <div class='info-box'>
-                <p><strong>Smoker:</strong> {'Yes ❌' if smoker == 'yes' else 'No ✅'}</p>
-                <p><strong>Region:</strong> {region.capitalize()}</p>
-                <p><strong>Model Confidence:</strong> {performance['test_r2']*100:.1f}%</p>
-                <p><strong>Expected Error:</strong> ±${performance['mae']:,.0f}</p>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            # Impact analysis
-            st.markdown("#### 🎯 Key Factors Affecting Your Cost")
-            
-            # Check risk factors
-            risk_factors = []
-            if age > 50:
-                risk_factors.append("🔴 High Age - Increases costs significantly")
-            if smoker == 'yes':
-                risk_factors.append("🔴 Smoking - Major cost driver")
-            if bmi >= 30:
-                risk_factors.append("🟡 High BMI - Moderate cost increase")
-            if bmi < 18.5:
-                risk_factors.append("🟢 Low BMI - Reduces costs")
-            
-            if risk_factors:
-                for factor in risk_factors:
-                    st.markdown(f"<div class='info-box'>{factor}</div>", unsafe_allow_html=True)
+
+                st.markdown("#### 📈 Your Profile Summary")
+                summary_col1, summary_col2 = st.columns(2)
+                with summary_col1:
+                    st.markdown(f"""
+                    <div class='info-box'>
+                    <p><strong>Age:</strong> {age} years</p>
+                    <p><strong>Sex:</strong> {sex.capitalize()}</p>
+                    <p><strong>BMI:</strong> {bmi:.2f} ({bmi_category_label})</p>
+                    <p><strong>Children:</strong> {children}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                with summary_col2:
+                    st.markdown(f"""
+                    <div class='info-box'>
+                    <p><strong>Smoker:</strong> {'Yes ❌' if smoker == 'yes' else 'No ✅'}</p>
+                    <p><strong>Region:</strong> {region.capitalize()}</p>
+                    <p><strong>Model Confidence:</strong> {performance['test_r2']*100:.1f}%</p>
+                    <p><strong>Expected Error:</strong> ±${performance['mae']:,.0f}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                # Risk factors (same logic as before)
+                risk_factors = []
+                if age > 50:
+                    risk_factors.append("🔴 High Age - Increases costs significantly")
+                if smoker == 'yes':
+                    risk_factors.append("🔴 Smoking - Major cost driver")
+                if bmi >= 30:
+                    risk_factors.append("🟡 High BMI - Moderate cost increase")
+                if bmi < 18.5:
+                    risk_factors.append("🟢 Low BMI - Reduces costs")
+
+                if risk_factors:
+                    for factor in risk_factors:
+                        st.markdown(f"<div class='info-box'>{factor}</div>", unsafe_allow_html=True)
+                else:
+                    st.markdown("""
+                    <div class='important-feature'>
+                    ✅ Your profile shows low risk factors - you qualify for better rates!
+                    </div>
+                    """, unsafe_allow_html=True)
             else:
                 st.markdown("""
-                <div class='important-feature'>
-                ✅ Your profile shows low risk factors - you qualify for better rates!
+                <div class='info-box' style='text-align: center; padding: 40px;'>
+                <p style='font-size: 1.2em; color: #cccccc;'>👆 Click the button to calculate your insurance cost</p>
                 </div>
                 """, unsafe_allow_html=True)
-        
-        else:
-            st.markdown("""
-            <div class='info-box' style='text-align: center; padding: 40px;'>
-            <p style='font-size: 1.2em; color: #cccccc;'>👆 Click the button to calculate your insurance cost</p>
-            </div>
-            """, unsafe_allow_html=True)
-    
-    st.markdown("---")
-    
-    # Information section
-    st.markdown("### ℹ️ How It Works")
-    
-    info_col1, info_col2, info_col3 = st.columns(3)
-    
-    with info_col1:
-        st.markdown("""
-        <div class='info-box'>
-        <h4 style='color: #16c784;'>1. Input Information</h4>
-        <p>Provide your personal and health information including age, BMI, smoking status, and family details.</p>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with info_col2:
-        st.markdown("""
-        <div class='info-box'>
-        <h4 style='color: #16c784;'>2. ML Processing</h4>
-        <p>Our trained machine learning model analyzes your data using 6 key features to make accurate predictions.</p>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with info_col3:
-        st.markdown("""
-        <div class='info-box'>
-        <h4 style='color: #16c784;'>3. Cost Estimation</h4>
-        <p>Receive an estimated annual insurance charge based on your profile and historical data patterns.</p>
-        </div>
-        """, unsafe_allow_html=True)
-        input_data = pd.DataFrame({
-            'age': [age],
-            'sex': [sex],
-            'bmi': [bmi],
-            'children': [children],
-            'smoker': [smoker],
-            'region': [region]
-        })
-
-        # Encode categorical variables
-        input_data['sex_encoded'] = model_package['label_encoders']['sex'].transform([sex])[0]
-        input_data['smoker_encoded'] = model_package['label_encoders']['smoker'].transform([smoker])[0]
-        input_data['region_encoded'] = model_package['label_encoders']['region'].transform([region])[0]
-        input_data['smoker_binary'] = 1 if smoker == 'yes' else 0
-
-        # Feature engineering
-        def categorize_bmi(bmi):
-            if bmi < 18.5:
-                return 0
-            elif bmi < 25:
-                return 1
-            elif bmi < 30:
-                return 2
-            else:
-                return 3
-
-        input_data['bmi_category'] = categorize_bmi(bmi)
-
-        if age <= 30:
-            input_data['age_group'] = 0
-        elif age <= 50:
-            input_data['age_group'] = 1
-        else:
-            input_data['age_group'] = 2
-
-        input_data['smoker_bmi'] = input_data['smoker_binary'] * bmi
-        input_data['age_bmi'] = age * bmi
-        input_data['is_obese_smoker'] = 1 if (bmi > 30 and smoker == 'yes') else 0
-        input_data['risk_score'] = age / 64 * 0.3 + bmi / 54 * 0.3 + input_data['smoker_binary'].values[0] * 0.4
-
-        # Prepare features for prediction
-        X_pred = input_data[feature_names]
-
-        # Scale if needed
-        if use_scaling:
-            X_pred = scaler.transform(X_pred)
-
-        # Make prediction
-        prediction = model.predict(X_pred)[0]
-
-        # Display prediction
-        st.markdown(f"""
-        <div style='background-color: #1e3d59; padding: 20px; border-radius: 10px; text-align: center;'>
-            <h2 style='color: white; margin-bottom: 10px;'>Predicted Annual Charges</h2>
-            <h1 style='color: #f5f0e1; font-size: 48px; margin: 0;'>${prediction:,.2f}</h1>
-        </div>
-        """, unsafe_allow_html=True)
-
-        st.markdown("")
-
-        # Risk assessment
-        if smoker == 'yes' and bmi > 30:
-            risk_level = "🔴 High Risk"
-            risk_color = "red"
-            recommendation = "You're in a high-risk category. Consider lifestyle changes."
-        elif smoker == 'yes' or bmi > 30:
-            risk_level = "🟡 Medium Risk"
-            risk_color = "orange"
-            recommendation = "Moderate risk factors detected. Monitor your health."
-        else:
-            risk_level = "🟢 Low Risk"
-            risk_color = "green"
-            recommendation = "You're in a low-risk category. Keep up the healthy lifestyle!"
-
-        st.markdown(f"**Risk Level:** <span style='color:{risk_color}; font-weight:bold;'>{risk_level}</span>", 
-                   unsafe_allow_html=True)
-        st.info(recommendation)
-
-        # Breakdown
-        with st.expander("📊 See Cost Breakdown & Factors"):
-            st.markdown("### Main Cost Factors:")
-
-            # Create factor analysis
-            factors = []
-            if smoker == 'yes':
-                factors.append(("Smoking Status", "High Impact", "Smokers typically pay 3-4x more"))
-            else:
-                factors.append(("Smoking Status", "Low Impact", "Non-smoker - lower charges"))
-
-            if bmi > 30:
-                factors.append(("BMI (Obesity)", "High Impact", "BMI > 30 increases charges"))
-            elif bmi > 25:
-                factors.append(("BMI", "Medium Impact", "BMI 25-30 (overweight)"))
-            else:
-                factors.append(("BMI", "Low Impact", "Healthy BMI range"))
-
-            if age > 50:
-                factors.append(("Age", "Medium Impact", "Age > 50 increases charges"))
-            elif age > 40:
-                factors.append(("Age", "Low-Medium Impact", "Age 40-50"))
-            else:
-                factors.append(("Age", "Low Impact", "Younger age bracket"))
-
-            if children > 2:
-                factors.append(("Children", "Low Impact", f"{children} dependents"))
-
-            for factor, impact, description in factors:
-                if "High" in impact:
-                    color = "🔴"
-                elif "Medium" in impact:
-                    color = "🟡"
-                else:
-                    color = "🟢"
-                st.markdown(f"{color} **{factor}** ({impact}): {description}")
-
 # Sidebar with additional information
 st.sidebar.header("ℹ️ About")
 st.sidebar.info(f"""
